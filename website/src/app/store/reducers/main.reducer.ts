@@ -36,7 +36,14 @@ export const reducer = createReducer(
   on(search, (state, props) => ({
     ...state,
     loading: true,
-    keywords: props.near ? { key: props.q, geo: props.near } : { key: props.q },
+    keywords:
+      props.near && props.cat
+        ? { key: props.q, geo: props.near, cat: props.cat }
+        : props.near && !props.cat
+        ? { key: props.q, geo: props.near }
+        : !props.near && props.cat
+        ? { key: props.q, cat: props.cat }
+        : { key: props.q },
   })),
   on(searchSuccess, (state, props) => ({
     ...state,

@@ -1,30 +1,37 @@
-import * as cdk from '@aws-cdk/core';
-import * as lambda from '@aws-cdk/aws-lambda';
-import * as dynamo from '@aws-cdk/aws-dynamodb';
-import * as logs from '@aws-cdk/aws-logs';
-import * as iam from '@aws-cdk/aws-iam';
-import * as cloudwatch from '@aws-cdk/aws-cloudwatch';
-import * as events from '@aws-cdk/aws-events';
-import * as targets from '@aws-cdk/aws-events-targets';
+import { Construct } from 'constructs';
+import * as cdk from 'aws-cdk-lib';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as dynamo from 'aws-cdk-lib/aws-dynamodb';
+import * as logs from 'aws-cdk-lib/aws-logs';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
+import * as events from 'aws-cdk-lib/aws-events';
+import * as targets from 'aws-cdk-lib/aws-events-targets';
+import * as sns from 'aws-cdk-lib/aws-sns';
+import * as subscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
+import * as cw_actions from 'aws-cdk-lib/aws-cloudwatch-actions';
+import * as pinpoint from 'aws-cdk-lib/aws-pinpoint';
 
 export interface CoreConstructProps {
-  userWebAppDomain: string;
   /**
    * Whether to delete everything on removal of the stack,
    * should be false ONLY for production or other sensitive environments
    */
   destroyOnRemoval: boolean;
   /**
-   * The territory associations csv data urls 
+   * The territory associations csv data urls
    */
   csvDataUrls: string;
+  /**
+   * The email to send notification alarms to
+   */
+  alarmEmail: string;
 }
 
 /**
  * Constract with all core resources
  */
-export class CoreConstruct extends cdk.Construct {
-  constructor(scope: cdk.Construct, id: string, props: CoreConstructProps) {
+export class CoreConstruct extends Construct {
+  constructor(scope: Construct, id: string, props: CoreConstructProps) {
     super(scope, id);
 
     const removalPolicy = props.destroyOnRemoval ? cdk.RemovalPolicy.DESTROY : cdk.RemovalPolicy.RETAIN;
@@ -75,18 +82,22 @@ export class CoreConstruct extends cdk.Construct {
       },
     };
 
+    const alarmTopic = new sns.Topic(scope, 'Alarm topic');
+
+    alarmTopic.addSubscription(new subscriptions.EmailSubscription(props.alarmEmail));
+
     // lambda to import territory associations to dynamodb
     const assTerImportLambda = new lambda.Function(this, 'AssTerImportFn', {
       code: new lambda.AssetCode('../etl/import-asster', {
-      bundling: {
-        image: cdk.DockerImage.fromRegistry('public.ecr.aws/sam/build-python3.8:latest'),
-        command: ['sh', 'cdk-build.sh'],
-        user: '1000',
-      },
+        bundling: {
+          image: cdk.DockerImage.fromRegistry('public.ecr.aws/sam/build-python3.8:latest'),
+          command: ['sh', 'cdk-build.sh'],
+          user: '1000',
+        },
       }),
       handler: 'main.lambda_handler',
       runtime: lambda.Runtime.PYTHON_3_8,
-      timeout: cdk.Duration.seconds(60),
+      timeout: cdk.Duration.seconds(120),
       memorySize: 512,
       description: 'Lambda per importare associazioni territoriali',
       environment: {
@@ -100,7 +111,7 @@ export class CoreConstruct extends cdk.Construct {
       period: cdk.Duration.minutes(1),
     });
 
-    new cloudwatch.Alarm(this, 'assTerImportErrorsAlarm', {
+    const importAlarm = new cloudwatch.Alarm(this, 'assTerImportErrorsAlarm', {
       metric: assTerImportErrors,
       threshold: 1,
       comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
@@ -108,15 +119,33 @@ export class CoreConstruct extends cdk.Construct {
       alarmDescription: 'An error occurred during the AssTerImport function execution',
     });
 
+    importAlarm.addAlarmAction(new cw_actions.SnsAction(alarmTopic));
+
     const eventRule = new events.Rule(this, 'scheduleRule', {
-      schedule: events.Schedule.cron({ minute: '0', hour: '4' }),
+      schedule: events.Schedule.cron({ minute: '0' }),
     });
 
     eventRule.addTarget(new targets.LambdaFunction(assTerImportLambda));
 
     this.dataTable = dataTable;
+    this.alarmTopicArn = alarmTopic.topicArn;
+
+    // create aws pinpoint
+    const cfnApp = new pinpoint.CfnApp(this, 'PinpointApp', {
+      name: `${cdk.Stack.of(this).stackName}PinPointApp`,
+      // the properties below are optional
+    });
+    this.pinpointArn = cfnApp.attrArn;
   }
 
+  /**
+   * The pinpoint app arn
+   */
+  pinpointArn: string;
+  /**
+   * The alarm topic arn
+   */
+  alarmTopicArn: string;
   /**
    * The main Table
    */

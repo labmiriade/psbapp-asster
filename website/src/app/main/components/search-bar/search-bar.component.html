@@ -10,13 +10,23 @@
       <ng-container *ngTemplateOutlet="buttoniera"></ng-container>
     </div>
   </div>
+  <div class="container horizontal-scrollable">
+    <div #srollableDiv class="row mt-3" (wheel)="scrollHorizontal($event)" id="srollableDiv">
+      <div class="d-flex flex-row align-items-center">
+        <div *ngFor="let cat of categoriesList | async" class="mr-3 search__category" (click)="setCategory(cat)">
+          <div class="badge badge-pill p-2" [ngClass]="cat.selected ? 'badge-primary' : 'badge-dark'">
+            <span>{{ cat.category }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </form>
 
 <ng-template #buttoniera>
   <div class="search-bar__button-block">
     <button type="submit" class="btn btn-primary search-bar__button" (click)="search($event)">
-      <span *ngIf="allPlace">Tutte le associazioni</span>
-      <span *ngIf="!allPlace">Ricerca</span>
+      <span>Ricerca</span>
     </button>
     <button
       type="button"

@@ -29,6 +29,19 @@ export interface paths {
       };
     };
   };
+  '/categories': {
+    /** Ottieni la lista di categorie */
+    get: {
+      responses: {
+        /** Lista di categorie */
+        200: {
+          content: {
+            'application/json': components['schemas']['CategoriesList'];
+          };
+        };
+      };
+    };
+  };
   '/search/p': {
     /** At least one of the 'q' or the 'near' parameters is required */
     get: {
@@ -54,6 +67,9 @@ export interface paths {
 
 export interface components {
   schemas: {
+    CategoriesList: {
+      categories: string[];
+    };
     PlaceList: {
       places?: components['schemas']['PlaceInfo'][];
     };

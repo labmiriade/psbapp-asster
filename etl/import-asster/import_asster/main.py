@@ -2,7 +2,8 @@ from smart_open import open
 import os
 import boto3
 import csv
-import  json
+import json
+import itertools
 
 from typing import List, Tuple, Set
 import traceback
@@ -14,6 +15,10 @@ table_name = os.environ.get("DATA_TABLE")
 table = dynamodb.Table(table_name)
 
 
+def lower_first(iterator):
+    return itertools.chain([next(iterator).lower()], iterator)
+
+
 def lambda_handler(event, context):
     failed_records: List[str] = []
     categories = set()
@@ -22,14 +27,19 @@ def lambda_handler(event, context):
     with table.batch_writer() as batch:
         for CSV_DATA_URL in CSV_DATA_URLS:
             try:
-                with open(CSV_DATA_URL, encoding='latin-1') as csvfile:
-                    ids_from_csv_temp, categoriesTemp, failed_records = put_places(csvfile, batch)
-                    categories.update(categoriesTemp)
+                print(f"START: {CSV_DATA_URL}")
+                with open(CSV_DATA_URL, encoding="latin-1") as csvfile:
+                    ids_from_csv_temp, categories_temp, failed_records = put_places(csvfile, batch)
+                    print(f"Found {len(ids_from_csv_temp)} good records")
+                    print(f"Found {len(failed_records)} bad records")
+                    print(f"Found {len(categories_temp)} categories")
+                    categories.update(categories_temp)
                     ids_from_csv.update(ids_from_csv_temp)
+                    print(f"COMPLETE: {CSV_DATA_URL}")
             except Exception as error:
-                print(f"file {CSV_DATA_URL=} not exist")
+                print(f"ERROR: {CSV_DATA_URL}")
                 traceback.print_exc()
-                raise Exception
+                raise error
         batch.put_item(
             Item={
                 "pk": "category",
@@ -76,10 +86,11 @@ def update_place(pk, searchable):
 
 
 def get_or_error(item, key):
+    key = key.lower()
     try:
         return item[key]
     except KeyError:
-        print(f'{item["ID"]}: Missing key: {key}')
+        print(f'{item["id"]}: Missing key: {key}')
         print(json.dumps(item))
     return ''
 
@@ -94,9 +105,9 @@ def put_places(csvfile, batch) -> Tuple[Set[str], Set[str], List[Exception]]:
     ids = set()
     categories = set()
     errors = []
-    reader = csv.DictReader(csvfile, delimiter=";")
+    reader = csv.DictReader(lower_first(csvfile), delimiter=";")
     for row in reader:
-        place_id = row["ID"]
+        place_id = row["id"]
         try:
             batch.put_item(
                 Item={
@@ -112,7 +123,7 @@ def put_places(csvfile, batch) -> Tuple[Set[str], Set[str], List[Exception]]:
                         "province": get_or_error(row, "Sede_Provincia"),
                         "streetName": get_or_error(row, "Sede_Via"),
                         "name": get_or_error(row, "Nome_Associazione"),
-                        "category": get_or_error(row, "Tipologia"),
+                        "category": get_or_error(row, "Tipologia").strip().lower(),
                         "lat": get_or_error(row, "Lat"),
                         "istatCode": get_or_error(row, "COD_ISTAT_Comune"),
                         "description": get_or_error(row, "Descrizione_attività"),
@@ -123,7 +134,8 @@ def put_places(csvfile, batch) -> Tuple[Set[str], Set[str], List[Exception]]:
                 }
             )
             ids.add(place_id)
-            categories.add(row["Tipologia"].strip().lower())
+            if row["tipologia"]:
+                categories.add(row["tipologia"].strip().lower())
         except Exception as error:
             errors.append(error)
             print(f"error processing {row=} {error=} {place_id=}")

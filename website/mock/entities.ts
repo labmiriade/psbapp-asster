@@ -31,3 +31,24 @@ export function PlaceInfo(placeId?: string): components['schemas']['PlaceInfo'] 
     openingTimeDesc: 'dal lunedì al venerdì dalle 9 alle 18',
   };
 }
+export function CategoriesList(): components['schemas']['CategoriesList'] {
+  return {
+    categories: [
+      'Esposizioni Permanenti',
+      'Percorsi e proposte didattiche',
+      'Territorio',
+      'Esposizioni Permanenti',
+      'Percorsi e proposte didattiche',
+      'Territorio',
+      'Esposizioni Permanenti',
+      'Percorsi e proposte didattiche',
+      'Territorio',
+      'Esposizioni Permanenti',
+      'Percorsi e proposte didattiche',
+      'Territorio',
+      'Esposizioni Permanenti',
+      'Percorsi e proposte didattiche',
+      'Territorio',
+    ],
+  };
+}

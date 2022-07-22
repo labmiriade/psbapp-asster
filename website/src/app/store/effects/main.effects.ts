@@ -19,7 +19,7 @@ export class MainEffects {
     this.actions$.pipe(
       ofType(search),
       mergeMap((props) =>
-        this.main.search(props.q, this.positionToString(props.near)).pipe(
+        this.main.search(props.q, this.positionToString(props.near), props.cat).pipe(
           map((results) => searchSuccess({ results: results.places as PlaceInfo[] })),
           catchError((e) => {
             this.toast.show(

@@ -41,13 +41,22 @@ export class SearchComponent implements OnInit, OnDestroy {
     this.sub.add(
       this.activatedRoute.queryParams.subscribe((params) => {
         this.q = params.q;
+        const cat = params.cat;
         const geo = params.geo === '1';
         if (geo) {
           this.geolocation.getCurrentPosition().then((result) => {
-            this.store.dispatch(search({ q: this.q, near: result }));
+            if (cat) {
+              this.store.dispatch(search({ q: this.q, near: result, cat: cat }));
+            } else {
+              this.store.dispatch(search({ q: this.q, near: result }));
+            }
           });
         } else {
-          this.store.dispatch(search({ q: this.q }));
+          if (cat) {
+            this.store.dispatch(search({ q: this.q, cat: cat }));
+          } else {
+            this.store.dispatch(search({ q: this.q }));
+          }
         }
       }),
     );

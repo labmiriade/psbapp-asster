@@ -2,7 +2,6 @@ import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { Subscription } from 'rxjs';
-import { take } from 'rxjs/operators';
 import { AppState } from '../store/reducers';
 import { searchKeywords } from '../store/selectors/main.selector';
 
@@ -22,12 +21,22 @@ export class MainComponent {
     );
   }
 
-  onSearchClick(event: { q: string; geo: boolean }): void {
-    this.router.navigate(['/search'], {
-      queryParams: {
+  onSearchClick(event: { q: string; geo: boolean; cat: string }): void {
+    let params: any = {};
+    if (event.cat !== '') {
+      params = {
         q: event.q,
         geo: event.geo ? '1' : '0',
-      },
+        cat: event.cat,
+      };
+    } else {
+      params = {
+        q: event.q,
+        geo: event.geo ? '1' : '0',
+      };
+    }
+    this.router.navigate(['/search'], {
+      queryParams: params,
     });
   }
 }

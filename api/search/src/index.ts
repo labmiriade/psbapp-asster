@@ -38,7 +38,7 @@ function getBody(queryTerm: string, location: string, category: string): any {
       ],
     },
   };
-  if (category !== '') query.query.bool.filter.push({ term: { category: category } }); //aggiunge il filtro per categoria
+  if (category !== '') query.query.bool.filter.push({ term: { 'category.keyword': category } }); //aggiunge il filtro per categoria
   if (queryTerm !== '')
     query.query.bool.must = {
       // dis_max to allow performing multiple queries

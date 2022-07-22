@@ -1,4 +1,5 @@
-import * as cdk from '@aws-cdk/core';
+import { Construct } from 'constructs';
+import * as cdk from 'aws-cdk-lib';
 import { ApiGatewayConstruct } from './apigateway-construct';
 import { WebAppConstruct, BaseWebAppConstructProps } from './webapp-stack';
 import { CoreConstruct } from './core-construct';
@@ -27,24 +28,29 @@ export interface InfrastructureStackProps extends cdk.StackProps {
    * Props for the search construct
    */
   searchProps: BaseSearchConstructProps;
+  /**
+   * The email to send notification alarms to
+   */
+  alarmEmail: string;
 }
 
 export class InfrastructureStack extends cdk.Stack {
-  constructor(scope: cdk.Construct, id: string, props: InfrastructureStackProps) {
+  constructor(scope: Construct, id: string, props: InfrastructureStackProps) {
     super(scope, id, props);
 
     // The code that defines your stack goes here
 
     const core = new CoreConstruct(this, 'Core', {
-      userWebAppDomain: props.endUserWebApp.domain,
       destroyOnRemoval: props.destroyOnRemoval,
       csvDataUrls: props.csvDataUrls,
+      alarmEmail: props.alarmEmail,
     });
 
     // const userManagement = new DarvadUserManagementConstruct(this, 'Users', props.userManagement);
 
     const search = new SearchConstruct(this, 'Search', {
       ...props.searchProps,
+      alarmTopicArn: core.alarmTopicArn,
       sourceTable: core.dataTable,
     });
 
@@ -52,6 +58,7 @@ export class InfrastructureStack extends cdk.Stack {
       dataTable: core.dataTable,
       // userPool: userManagement.userPool,
       searchLambda: search.searchFn,
+      getPlaceLambda: search.getPlaceFn,
     });
 
     let regexLocationName = props.locationMapArn.match(/.*:map\/(.*)/);
@@ -61,6 +68,7 @@ export class InfrastructureStack extends cdk.Stack {
 
     const auth = new AuthConstruct(this, 'Auth', {
       locationMapArn: props.locationMapArn,
+      pinpointArn: core.pinpointArn,
     });
 
     const endUserCDN = new WebAppConstruct(this, 'EndUser', {
@@ -77,10 +85,12 @@ export class InfrastructureStack extends cdk.Stack {
       awsRegion: props.env?.region ?? 'eu-west-1',
       awsMapName: regexLocationName[1],
       awsIdentityPoolId: auth.identityPool.ref,
+      pinpointArn: core.pinpointArn,
     });
 
     configWriter.node.addDependency(auth.identityPool);
     configWriter.node.addDependency(endUserCDN.frontendBucket);
+
     /*
     // const adminCDN = new WebAppConstruct(this, 'Admin', {
     //   apiStage: mainGW.stage,

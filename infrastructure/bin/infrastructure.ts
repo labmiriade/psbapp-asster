@@ -1,7 +1,20 @@
 #!/usr/bin/env node
 import 'source-map-support/register';
-import * as cdk from '@aws-cdk/core';
+import * as cdk from 'aws-cdk-lib';
 import { InfrastructureStack, InfrastructureStackProps } from '../lib/infrastructure-stack';
+
+const DATA_URLS = [
+  'https://dati.veneto.it/SpodCkanApi/api/1/rest/dataset/comune_di_schio_albo_delle_associazioni.csv',
+  'https://dati.veneto.it/SpodCkanApi/api/1/rest/dataset/comune_di_thiene_albo_delle_associazioni_.csv',
+  'https://dati.veneto.it/SpodCkanApi/api/1/rest/dataset/dataset_associazioni.csv', //valdagno
+  'https://dati.veneto.it/SpodCkanApi/api/1/rest/dataset/associazioni_operative_sul_territorio.csv', //isola vicentina
+  'https://dati.veneto.it/SpodCkanApi/api/1/rest/dataset/comune_di_monte_di_malo_albo_delle_associazioni.csv',
+  'https://dati.veneto.it/SpodCkanApi/api/1/rest/dataset/comune_di_santorso_albo_delle_associazioni.csv',
+  'https://dati.veneto.it/SpodCkanApi/api/1/rest/dataset/associazioni.csv', //san vito di leguzzano
+  'https://dati.veneto.it/SpodCkanApi/api/1/rest/dataset/comune_di_torrebelvicino_albo_associazioni.csv',
+  'https://dati.veneto.it/SpodCkanApi/api/1/rest/dataset/comune_di_villavera_albo_delle_associazioni.csv',
+  'https://dati.veneto.it/SpodCkanApi/api/1/rest/dataset/comune_di_zugliano_albo_delle_associazioni.csv',
+];
 
 const env: cdk.Environment = {
   account: '<ACCOUNT_ID>',
@@ -13,7 +26,7 @@ const app = new cdk.App();
 /////// STACK DI SVILUPPO
 
 // default props for all dev env: customizable afterwards
-function makeDefaultDevProps(ownerName: string): InfrastructureStackProps {
+function makeDefaultDevProps(ownerName: string, ownerEmail: string): InfrastructureStackProps {
   return {
     env,
     endUserWebApp: {
@@ -26,7 +39,7 @@ function makeDefaultDevProps(ownerName: string): InfrastructureStackProps {
     },
     description: `Development Stack for Pasubio App - AssTer owned by ${ownerName}`,
     destroyOnRemoval: true,
-    csvDataUrls: JSON.stringify(['TO REPLACE WITH CSV URL']),
+    csvDataUrls: JSON.stringify(DATA_URLS),
     locationMapArn: '<LOCATION_MAP_ARN>',
     searchProps: {
       indexPrefix: ownerName,
@@ -35,6 +48,7 @@ function makeDefaultDevProps(ownerName: string): InfrastructureStackProps {
         domainEndpoint: '<ES_ENDPOINT>',
       },
     },
+    alarmEmail: ownerEmail,
   };
 }
 

@@ -23,7 +23,17 @@ paths:
                 $ref: '#/components/schemas/PlaceInfo'
         444:
           description: Luogo non esistente
-
+  /categories:
+    get:
+      tags: [End User]
+      description: Ottieni la lista di categorie
+      responses:
+        200:
+          description: Lista di categorie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoriesList'
   ##### SEARCH API
   /search/p:
     get:
@@ -58,6 +68,15 @@ paths:
 
 components:
   schemas:
+    CategoriesList:
+      type: object
+      required:
+        - categories
+      properties:
+        categories:
+          type: array
+          items:
+            type: string
     PlaceList:
       type: object
       properties:
